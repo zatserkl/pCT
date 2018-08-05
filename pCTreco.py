@@ -66,7 +66,7 @@ class Track:
             row, col = row_col
             # print('Track.phantom_w[row, col] =', Track.phantom_w[row, col])
             # print(Track.phantom_w[row, col], end='\t')  # print voxel value
-            print(row_col, end='\t')                      # voxel coordinates
+            print('\t', row_col, end='')                  # voxel coordinates
         print()
 
 
@@ -178,7 +178,7 @@ if __name__ == '__main__':
     phantom_v = np.zeros((N, N))  # true values
     phantom_w = np.zeros((N, N))  # weights
     phantom_d = np.zeros((N, N))  # derivatives
-    
+
     # incident energy
     Einc = 100  # MeV
 
