@@ -142,67 +142,6 @@ def print_phantom(phantom):
         print()
 
 
-N = 2
-phantom_v = np.zeros((N, N))  # true values
-phantom_w = np.zeros((N, N))  # weights
-phantom_d = np.zeros((N, N))  # derivatives
-
-# incident energy
-Einc = 100  # MeV
-
-#
-# initialize Track global variables
-#
-Track.phantom_w = phantom_w
-Track.phantom_d = phantom_d
-Track.Einc = Einc
-
-#
-# set the phantom density (in terms of energy loss)
-#
-phantom_v[1, 1] = 10  # loss 10 MeV
-phantom_v[1, 0] = 3   # loss 3 MeV
-phantom_v[0, 0] = 5   # loss 5 MeV
-
-# print('"real" phantom\n')
-# print_phantom(phantom_v)
-
-tracks = []
-# # the track energy will be measured later
-# tracks.append(Track(Einc, [(0, 0), (0, 1)]))
-# ### tracks.append(Track(Einc, [(1, 0), (1, 1)]))  # arbitrary eliminated
-# tracks.append(Track(Einc, [(0, 0), (1, 0)]))
-# tracks.append(Track(Einc, [(0, 1), (1, 1)]))
-# tracks.append(Track(Einc, [(0, 0)]))
-# ### tracks.append(Track(Einc, [(1, 0), (0, 1)]))  # arbitrary eliminated
-# tracks.append(Track(Einc, [(1, 1)]))
-# tracks.append(Track(Einc, [(1, 0)]))
-# ### tracks.append(Track(Einc, [(0, 0), (1, 1)]))  # arbitrary eliminated
-# tracks.append(Track(Einc, [(0, 1)]))
-
-# Generate rays and create tracks
-
-generated_rays = generate_rays(N)
-for ray in generated_rays:
-    tracks.append(Track(Einc, ray))
-
-# measure the energy
-for track in tracks:
-    Elost = 0
-    for voxel in track.voxels:
-        row, col = voxel
-        Elost += phantom_v[row, col]
-    track.Edet = Einc - Elost
-
-print('\nMeasured tracks:')
-
-for track in tracks:
-    track.print()
-
-
-###############################################
-
-
 def costFunction_calculate(tracks, phantom_w):
     """
     Calculates cost function, does not compute derivatives
@@ -232,36 +171,88 @@ def costFunction(tracks, phantom_w, phantom_d):
     phantom_d /= len(tracks)
     return J / len(tracks) / 2
 
-cost = []
-cost.append(costFunction_calculate(tracks, phantom_w))
 
-iter_max = 3
-for iter in range(1, iter_max+1):
-    print('\n--------------- iteration', iter, '---------------')
+if __name__ == '__main__':
 
-    Ji = costFunction(tracks, phantom_w, phantom_d)
-    print('\nInitial Cost function Ji =', Ji)
+    N = 2
+    phantom_v = np.zeros((N, N))  # true values
+    phantom_w = np.zeros((N, N))  # weights
+    phantom_d = np.zeros((N, N))  # derivatives
+    
+    # incident energy
+    Einc = 100  # MeV
 
-    print('\n"real" phantom\n')
-    print_phantom(phantom_v)
+    #
+    # initialize Track global variables
+    #
+    Track.phantom_w = phantom_w
+    Track.phantom_d = phantom_d
+    Track.Einc = Einc
 
-    # print('\nInitial "weights" phantom: should be empty\n')
-    # print_phantom(phantom_w)
+    #
+    # set the phantom density (in terms of energy loss)
+    #
+    phantom_v[1, 1] = 10  # loss 10 MeV
+    phantom_v[1, 0] = 3   # loss 3 MeV
+    phantom_v[0, 0] = 5   # loss 5 MeV
 
-    print('\n"derivatives" phantom\n')
-    print_phantom(phantom_d)
+    # print('"real" phantom\n')
+    # print_phantom(phantom_v)
 
-    # introduce the correction
-    phantom_w -= phantom_d
+    # Generate rays and create tracks
+    tracks = []
 
-    print('\n"weights" phantom after correction\n')
-    print_phantom(phantom_w)
+    generated_rays = generate_rays(N)
+    for ray in generated_rays:
+        tracks.append(Track(Einc, ray))
 
-    Jf = costFunction_calculate(tracks, phantom_w)
-    print('\nFinal Cost function Jf =', Jf)
-    cost.append(Jf)
+    # measure the energy
+    for track in tracks:
+        Elost = 0
+        for voxel in track.voxels:
+            row, col = voxel
+            Elost += phantom_v[row, col]
+        track.Edet = Einc - Elost
 
-plt.figure()
-plt.plot(cost, marker='o', linestyle='None')
-plt.grid()
-plt.show()
+    print('\nMeasured tracks:')
+
+    for track in tracks:
+        track.print()
+
+
+    ###############################################
+
+
+    cost = []
+    cost.append(costFunction_calculate(tracks, phantom_w))
+
+    iter_max = 3
+    for iter in range(1, iter_max+1):
+        print('\n--------------- iteration', iter, '---------------')
+
+        Ji = costFunction(tracks, phantom_w, phantom_d)
+        print('\nInitial Cost function Ji =', Ji)
+
+        print('\n"real" phantom\n')
+        print_phantom(phantom_v)
+
+        # print('\nInitial "weights" phantom: should be empty\n')
+        # print_phantom(phantom_w)
+
+        print('\n"derivatives" phantom\n')
+        print_phantom(phantom_d)
+
+        # introduce the correction
+        phantom_w -= phantom_d
+
+        print('\n"weights" phantom after correction\n')
+        print_phantom(phantom_w)
+
+        Jf = costFunction_calculate(tracks, phantom_w)
+        print('\nFinal Cost function Jf =', Jf)
+        cost.append(Jf)
+
+    plt.figure()
+    plt.plot(cost, marker='o', linestyle='None')
+    plt.grid()
+    plt.show()
