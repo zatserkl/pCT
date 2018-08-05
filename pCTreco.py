@@ -6,7 +6,7 @@ Working example of Machine Learning approach to pCT image reconstruction.
 
 import numpy as np
 import matplotlib.pyplot as plt
-from collections import defaultdict
+
 # % matplotlib inline
 
 
@@ -70,69 +70,69 @@ class Track:
         print()
 
 
-def generate_horizontal_tracks(N):
-    tracks = []
+def generate_horizontal_rays(N):
+    rays = []
     for row in range(N):
-        track = []
+        ray = []
         for col in range(N):
-            track.append((row, col))
-        tracks.append(track)
-    return tracks
+            ray.append((row, col))
+        rays.append(ray)
+    return rays
 
 
-def generate_vertical_tracks(N):
-    tracks = []
+def generate_vertical_rays(N):
+    rays = []
     for col in range(N):
-        track = []
+        ray = []
         for row in range(N):
-            track.append((row, col))
-        tracks.append(track)
-    return tracks
+            ray.append((row, col))
+        rays.append(ray)
+    return rays
 
 
-def generate_diagonal_tracks(N):
+def generate_diagonal_rays(N):
     """NB that the second coordinate in POSITIVE and NEGATIVE pairs is the same.
     The first one in NEGATIVE is related to first in POSITIVE as 4-x
     """
 
-    # Generate positive slope tracks
+    # Generate positive slope rays
 
-    tracks_pos = []
+    rays_pos = []
     for row in range(N):
         i, j = row, 0
-        track_top = []
-        track_bot = []
+        ray_top = []
+        ray_bot = []
         for k in range(row+1):
             # print((i-k, j+k), 'bottom:', (N-1-(j+k), N-1-(i-k)))
-            track_top.append((i-k, j+k))
-            track_bot.append((N-1-(j+k), N-1-(i-k)))
+            ray_top.append((i-k, j+k))
+            ray_bot.append((N-1-(j+k), N-1-(i-k)))
         # print()
-        tracks_pos.append(track_top)
-        tracks_pos.append(track_bot)
+        rays_pos.append(ray_top)
+        rays_pos.append(ray_bot)
 
-    # remove last track - it's a duplicate of previous
-    del tracks_pos[-1]
+    # remove last ray - it's a duplicate of previous
+    del rays_pos[-1]
 
-    """Create negative slope tracks changing the x-coordinate to (N-1) - x
+    """Create negative slope rays changing the x-coordinate to (N-1) - x
     """
 
-    tracks_neg = []
-    for track_pos in tracks_pos:
-        track_neg = []
-        for cell in track_pos:
+    rays_neg = []
+    for ray_pos in rays_pos:
+        ray_neg = []
+        for cell in ray_pos:
             # append tuple with the first element changed to (N-1) - x
-            track_neg.append((N - 1 - cell[0], cell[1]))
-        tracks_neg.append(track_neg)
+            ray_neg.append((N - 1 - cell[0], cell[1]))
+        rays_neg.append(ray_neg)
 
-    tracks = tracks_pos + tracks_neg
-    return tracks
+    rays = rays_pos + rays_neg
+    return rays
 
 
-def generate_tracks(N):
-    tracks = generate_horizontal_tracks(N) +\
-        generate_vertical_tracks(N) +\
-        generate_diagonal_tracks(N)
-    return tracks
+def generate_rays(N):
+    rays = generate_horizontal_rays(N) +\
+        generate_vertical_rays(N) +\
+        generate_diagonal_rays(N)
+    return rays
 
 
 def print_phantom(phantom):
@@ -164,26 +164,27 @@ phantom_v[1, 1] = 10  # loss 10 MeV
 phantom_v[1, 0] = 3   # loss 3 MeV
 phantom_v[0, 0] = 5   # loss 5 MeV
 
-print('"real" phantom\n')
-print_phantom(phantom_v)
+# print('"real" phantom\n')
+# print_phantom(phantom_v)
 
 tracks = []
-# the track energy will be measured later
-tracks.append(Track(Einc, [(0, 0), (0, 1)]))
-### tracks.append(Track(Einc, [(1, 0), (1, 1)]))  # arbitrary eliminated
-tracks.append(Track(Einc, [(0, 0), (1, 0)]))
-tracks.append(Track(Einc, [(0, 1), (1, 1)]))
-tracks.append(Track(Einc, [(0, 0)]))
-### tracks.append(Track(Einc, [(1, 0), (0, 1)]))  # arbitrary eliminated
-tracks.append(Track(Einc, [(1, 1)]))
-tracks.append(Track(Einc, [(1, 0)]))
-### tracks.append(Track(Einc, [(0, 0), (1, 1)]))  # arbitrary eliminated
-tracks.append(Track(Einc, [(0, 1)]))
+# # the track energy will be measured later
+# tracks.append(Track(Einc, [(0, 0), (0, 1)]))
+# ### tracks.append(Track(Einc, [(1, 0), (1, 1)]))  # arbitrary eliminated
+# tracks.append(Track(Einc, [(0, 0), (1, 0)]))
+# tracks.append(Track(Einc, [(0, 1), (1, 1)]))
+# tracks.append(Track(Einc, [(0, 0)]))
+# ### tracks.append(Track(Einc, [(1, 0), (0, 1)]))  # arbitrary eliminated
+# tracks.append(Track(Einc, [(1, 1)]))
+# tracks.append(Track(Einc, [(1, 0)]))
+# ### tracks.append(Track(Einc, [(0, 0), (1, 1)]))  # arbitrary eliminated
+# tracks.append(Track(Einc, [(0, 1)]))
 
-print('\nTest printout of generated tracks')
-generated_tracks = generate_tracks(N)
-for track in generated_tracks:
-    print(track)
+# Generate rays and create tracks
+
+generated_rays = generate_rays(N)
+for ray in generated_rays:
+    tracks.append(Track(Einc, ray))
 
 # measure the energy
 for track in tracks:
@@ -198,9 +199,23 @@ print('\nMeasured tracks:')
 for track in tracks:
     track.print()
 
+
 ###############################################
 
-# Cost function
+
+def costFunction_calculate(tracks, phantom_w):
+    """
+    Calculates cost function, does not compute derivatives
+    """
+    J = 0.  # cost function
+
+    for track in tracks:
+        loss = track.loss()  # does not compute derivatives
+        J += loss * loss
+
+    return J / len(tracks) / 2
+
+
 def costFunction(tracks, phantom_w, phantom_d):
     """
     Returns cost function.
@@ -213,47 +228,40 @@ def costFunction(tracks, phantom_w, phantom_d):
     for track in tracks:
         loss = track.loss_der()  # calcs loss function J and modifies phantom_d
         J += loss * loss
-    
+
     phantom_d /= len(tracks)
     return J / len(tracks) / 2
 
+cost = []
+cost.append(costFunction_calculate(tracks, phantom_w))
 
-J = costFunction(tracks, phantom_w, phantom_d)
-print('\nInitial Cost function J =', J)
+iter_max = 3
+for iter in range(1, iter_max+1):
+    print('\n--------------- iteration', iter, '---------------')
 
-print('\n"real" phantom\n')
-print_phantom(phantom_v)
+    Ji = costFunction(tracks, phantom_w, phantom_d)
+    print('\nInitial Cost function Ji =', Ji)
 
-print('\nInitial "weights" phantom: should be empty\n')
-print_phantom(phantom_w)
+    print('\n"real" phantom\n')
+    print_phantom(phantom_v)
 
-print('\n"derivatives" phantom\n')
-print_phantom(phantom_d)
+    # print('\nInitial "weights" phantom: should be empty\n')
+    # print_phantom(phantom_w)
 
-# introduce the correction
-phantom_w -= phantom_d
+    print('\n"derivatives" phantom\n')
+    print_phantom(phantom_d)
 
-print('\n"weights" phantom after correction\n')
-print_phantom(phantom_w)
+    # introduce the correction
+    phantom_w -= phantom_d
 
-#
-# the next iteration
-#
-print('\nThe next iteration')
-print('------------------\n')
+    print('\n"weights" phantom after correction\n')
+    print_phantom(phantom_w)
 
-J = costFunction(tracks, phantom_w, phantom_d)
-print('Cost function J =', J)
+    Jf = costFunction_calculate(tracks, phantom_w)
+    print('\nFinal Cost function Jf =', Jf)
+    cost.append(Jf)
 
-print('\n"weights" phantom\n')
-print_phantom(phantom_w)
-
-print('\n"derivatives" phantom\n')
-print_phantom(phantom_d)
-
-# introduce the correction
-phantom_w -= phantom_d
-
-print('\n"weights" phantom after correction\n')
-print_phantom(phantom_w)
-
+plt.figure()
+plt.plot(cost, marker='o', linestyle='None')
+plt.grid()
+plt.show()
